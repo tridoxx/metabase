@@ -115,13 +115,13 @@ export const getStaticFormatters = (
     const columnSettings = settings.column_settings?.[getColumnKey(column)];
     const valueToFormat = getRemappedValue(value, column);
 
-    return String(
-      formatStaticValue(valueToFormat, {
-        column,
-        ...columnSettings,
-        jsx: false,
-      }),
-    );
+    const options = getFormattingOptionsWithoutScaling({
+      column,
+      ...columnSettings,
+      jsx: false,
+    });
+
+    return String(formatStaticValue(valueToFormat, options));
   };
 
   const metricColumn = getLabelsMetricColumn(chartColumns);
@@ -131,15 +131,15 @@ export const getStaticFormatters = (
     const number_separators =
       settings.column_settings?.[getColumnKey(column)]?.number_separators;
 
-    return String(
-      formatStaticValue(percent, {
-        column,
-        number_separators,
-        jsx: false,
-        number_style: "percent",
-        decimals: 2,
-      }),
-    );
+    const options = getFormattingOptionsWithoutScaling({
+      column,
+      number_separators,
+      jsx: false,
+      number_style: "percent",
+      decimals: 2,
+    });
+
+    return String(formatStaticValue(percent, options));
   };
 
   const xTickFormatter = (value: NumberLike) => {
@@ -147,13 +147,13 @@ export const getStaticFormatters = (
     const columnSettings = settings.column_settings?.[getColumnKey(column)];
     const valueToFormat = getRemappedValue(value, column);
 
-    return String(
-      formatStaticValue(valueToFormat, {
-        column,
-        ...columnSettings,
-        jsx: false,
-      }),
-    );
+    const options = getFormattingOptionsWithoutScaling({
+      column,
+      ...columnSettings,
+      jsx: false,
+    });
+
+    return String(formatStaticValue(valueToFormat, options));
   };
 
   const shouldFormatXTicksAsPercent = getStackOffset(settings) === "expand";
