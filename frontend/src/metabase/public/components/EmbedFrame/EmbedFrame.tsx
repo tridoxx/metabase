@@ -1,6 +1,6 @@
 import cx from "classnames";
 import type { ReactNode, JSX } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMount } from "react-use";
 import _ from "underscore";
 
@@ -119,19 +119,26 @@ export const EmbedFrame = ({
   const [hasInnerScroll, setHasInnerScroll] = useState(
     document.documentElement.scrollTop > 0,
   );
+  const embedFrameRef = useRef<HTMLDivElement>(null);
 
   useMount(() => {
     initializeIframeResizer(() => setHasFrameScroll(false));
   });
 
   useEffect(() => {
-    const handleScroll = () => {
-      setHasInnerScroll(document.documentElement.scrollTop > 0);
-    };
+    const embedFrameElement = embedFrameRef.current;
+    if (embedFrameElement) {
+      const handleScroll = () => {
+        setHasInnerScroll(embedFrameElement.scrollTop > 0);
+      };
 
-    document.addEventListener("scroll", handleScroll, { passive: true });
+      embedFrameElement.addEventListener("scroll", handleScroll, {
+        passive: true,
+      });
 
-    return () => document.removeEventListener("scroll", handleScroll);
+      return () =>
+        embedFrameElement.removeEventListener("scroll", handleScroll);
+    }
   }, []);
 
   const hideParameters = [hide_parameters, hiddenParameterSlugs]
@@ -157,6 +164,7 @@ export const EmbedFrame = ({
 
   return (
     <Root
+      ref={embedFrameRef}
       hasScroll={hasFrameScroll}
       isBordered={bordered}
       className={cx(
