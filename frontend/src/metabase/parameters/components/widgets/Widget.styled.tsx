@@ -2,6 +2,26 @@ import styled from "@emotion/styled";
 
 import { space } from "metabase/styled-components/theme";
 
+/**
+ * XXX: Is this all of the widget root?
+ * - DateSingleWidget ✅
+ * - DateRangeWidget ✅
+ * - DateRelativeWidget ❌
+ * - DateMonthYearWidget ❌
+ * - DateQuarterYearWidget ❌
+ * - DateAllOptionsWidget ✅
+ *
+ * - TemporalUnitWidget ❌
+ *
+ * - TextWidget ❌
+ *
+ * - NumberInputWidget ✅
+ *
+ * - ParameterFieldWidget ✅
+ *
+ * - StringInputWidget ✅
+ */
+
 export const WidgetRoot = styled.div`
   min-width: 300px;
 `;

@@ -104,9 +104,14 @@ const footerVariantStyles = {
   `,
 };
 
-function getParameterPanelBackgroundColor(theme?: DisplayTheme) {
+function getParameterPanelBackgroundColor(
+  theme: DisplayTheme | undefined,
+  isSticky: boolean,
+) {
   if (theme === "night") {
-    return color("bg-black");
+    return `color-mix(in srgb, ${color("bg-black")}, transparent ${
+      isSticky ? 15 : 100
+    }%)`;
   }
   return color("bg-white");
 }
@@ -124,6 +129,7 @@ function getParameterPanelBorderColor(theme?: DisplayTheme) {
 export const ParametersWidgetContainer = styled(FullWidthContainer)<{
   embedFrameTheme?: DisplayTheme;
   hasScroll: boolean;
+  canSticky: boolean;
   isSticky: boolean;
 }>`
   padding-top: ${space(1)};
@@ -137,7 +143,7 @@ export const ParametersWidgetContainer = styled(FullWidthContainer)<{
     `}
 
   ${props =>
-    props.isSticky &&
+    props.canSticky &&
     css`
       position: sticky;
       top: 0;
@@ -145,8 +151,11 @@ export const ParametersWidgetContainer = styled(FullWidthContainer)<{
       width: 100%;
       z-index: 3;
 
+      transition: background-color 0.4s;
+
       background-color: ${getParameterPanelBackgroundColor(
         props.embedFrameTheme,
+        props.isSticky,
       )};
     `}
 `;
@@ -167,4 +176,12 @@ export const Footer = styled.footer<{ variant: FooterVariant }>`
   ${breakpointMinLarge} {
     padding: 1.5rem;
   }
+`;
+
+export const IntersectionObserverTarget = styled.span`
+  position: absolute;
+  width: 100%;
+  height: 60px;
+  bottom: 0;
+  transform: translateY(100%);
 `;

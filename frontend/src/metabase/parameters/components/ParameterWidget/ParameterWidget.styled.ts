@@ -9,12 +9,17 @@ interface ParameterFieldSetProps {
 }
 
 export const ParameterFieldSet = styled(FieldSet)<ParameterFieldSetProps>`
+  /* XXX: add background here */
+  background-color: var(--mb-color-filter-background-color);
+  color: var(--mb-color-filter-text-color, --mb-color-text-medium);
   display: flex;
   align-items: center;
   transition: opacity 500ms linear;
   border: 2px solid
     ${props =>
-      props.fieldHasValueOrFocus ? color("brand") : "var(--mb-color-border)"};
+      props.fieldHasValueOrFocus
+        ? color("brand")
+        : "var(--mb-color-filter-border-color, var(--mb-color-border))"};
   margin: 0.5em 0;
   padding: 0.25em 1em;
   width: 100%;

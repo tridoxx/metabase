@@ -13,14 +13,21 @@ body {
 }
 
 .ThemeNight.EmbedFrame {
-  background-color: var(--mb-color-bg-black);
+  /* XXX: transparent background */
+  background-color: transparent;
   border-color: var(--mb-color-bg-dark);
+
+  --mb-color-filter-background-color: var(--mb-color-bg-black);
+  --mb-color-filter-text-color: var(--mb-color-text-white);
+  --mb-color-filter-border-color: var(--mb-color-text-medium);
 }
 
 .ThemeNight .EmbedFrameHeader,
 .ThemeNight .EmbedFrameFooter {
   color: var(--mb-color-text-white-alpha-85);
   background-color: var(--mb-color-bg-black);
+  /* XXX: transparent background */
+  background-color: transparent;
   border-color: var(--mb-color-bg-dark);
 }
 

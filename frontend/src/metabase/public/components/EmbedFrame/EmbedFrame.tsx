@@ -41,6 +41,7 @@ import {
   DashboardTabsContainer,
   Footer,
   Header,
+  IntersectionObserverTarget,
   ParametersWidgetContainer,
   Root,
   Separator,
@@ -125,6 +126,23 @@ export const EmbedFrame = ({
     initializeIframeResizer(() => setHasFrameScroll(false));
   });
 
+  const intersectionObserverTargetRef = useRef<HTMLElement>(null);
+  const [isSticky, setIsSticky] = useState(false);
+  useEffect(() => {
+    const settings: IntersectionObserverInit = {
+      threshold: 1,
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsSticky(entry.intersectionRatio < 1);
+    }, settings);
+    if (intersectionObserverTargetRef.current) {
+      observer.observe(intersectionObserverTargetRef.current);
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
   useEffect(() => {
     const embedFrameElement = embedFrameRef.current;
     if (embedFrameElement) {
@@ -157,9 +175,13 @@ export const EmbedFrame = ({
   const hasVisibleParameters = visibleParameters.length > 0;
 
   const hasHeader = Boolean(finalName || dashboardTabs);
-  const isParameterPanelSticky =
+  // XXX: Make this non sticky when background=false
+  const background = false;
+
+  const isBackgroundTransparent = theme === "transparent" || !background;
+  const canParameterPanelSticky =
     !!dashboard &&
-    theme !== "transparent" && // https://github.com/metabase/metabase/pull/38766#discussion_r1491549200
+    isBackgroundTransparent && // https://github.com/metabase/metabase/pull/38766#discussion_r1491549200
     isParametersWidgetContainersSticky(visibleParameters.length);
 
   return (
@@ -208,11 +230,15 @@ export const EmbedFrame = ({
             <Separator />
           </Header>
         )}
+        <span style={{ position: "relative" }}>
+          <IntersectionObserverTarget ref={intersectionObserverTargetRef} />
+        </span>
         {hasVisibleParameters && (
           <ParametersWidgetContainer
             embedFrameTheme={theme}
             hasScroll={hasInnerScroll}
-            isSticky={isParameterPanelSticky}
+            canSticky={canParameterPanelSticky}
+            isSticky={isSticky}
             data-testid="dashboard-parameters-widget-container"
           >
             <ParametersFixedWidthContainer
