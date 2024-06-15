@@ -21,24 +21,27 @@ type ColumnItem = {
 };
 
 export type TableProps<Row extends BaseRow> = {
-  /** An array of objects with name and key properties */
   columns: ColumnItem[];
-  /** An array of row objects, which at minimum need an id */
   rows: Row[];
-  /** A function that takes a row object and returns a <tr> element */
   rowRenderer: (row: Row) => React.ReactNode;
-
-  /** A function that takes a row object and a column key and returns a value to use for sorting */
   formatValueForSorting?: (row: Row, columnName: string) => any;
   defaultSortColumn?: string;
   defaultSortDirection?: "asc" | "desc";
-
-  /** A component to render if the table is empty */
   ifEmpty?: React.ReactNode;
 } & React.HTMLAttributes<HTMLTableElement>;
 
 /**
  * A basic reusable table component that supports client-side sorting by a column
+ *
+ * @param {object} props
+ * @property columns - An array of objects with name and key properties
+ * @property rows - An array of row objects, which at minimum need an id
+ * @property rowRenderer - A function that takes a row object and returns a <tr> element
+ * @property formatValueForSorting
+ * @property defaultSortColumn
+ * @property defaultSortDirection
+ * @property ifEmpty - A component to render if the table is empty
+ * @note All other props are passed to the <table> element
  */
 export function Table<Row extends BaseRow>({
   columns,
