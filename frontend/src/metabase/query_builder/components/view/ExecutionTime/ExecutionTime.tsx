@@ -10,6 +10,8 @@ interface Props {
 
 export const ExecutionTime = ({ time }: Props) => (
   <Tooltip label={t`Query execution time`}>
-    <span data-testid="execution-time">{formatDuration(time)}</span>
+    <span aria-label={t`Query execution time`} data-testid="execution-time">
+      {formatDuration(time)}
+    </span>
   </Tooltip>
 );
