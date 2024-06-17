@@ -223,6 +223,16 @@
                             (qp/process-query
                              (assoc (mt/mbql-query just-dates {:order-by [[:asc $id]]})
                                     :middleware {:format-rows? false}))))))))
+      (testing "Databricks behaves as Spark ie. another `hive-like` implementation."
+        (mt/test-drivers #{:databricks-jdbc}
+                         (is (= [[1 "foo" #t "2004-10-19T10:23:54Z[UTC]" #t "2004-10-19"]
+                                 [2 "bar" #t "2008-10-19T10:23:54Z[UTC]" #t "2008-10-19"]
+                                 [3 "baz" #t "2012-10-19T10:23:54Z[UTC]" #t "2012-10-19"]]
+                                (mt/rows (mt/dataset just-dates
+                                                     (qp/process-query
+                                                      ;; TODO: Why underscore is necessary for Databricks?
+                                                      (assoc (mt/mbql-query just_dates {:order-by [[:asc $id]]})
+                                                             :middleware {:format-rows? false}))))))))
       (testing "oracle doesn't have a time type"
         (mt/test-drivers #{:oracle}
           (is (= [[1M "foo" #t "2004-10-19T10:23:54" #t "2004-10-19T00:00"]
