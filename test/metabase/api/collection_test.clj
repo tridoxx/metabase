@@ -17,6 +17,7 @@
    [metabase.models.permissions :as perms]
    [metabase.models.permissions-group :as perms-group]
    [metabase.models.revision :as revision]
+   [metabase.stale-test :as stale.test]
    [metabase.test :as mt]
    [metabase.test.data.users :as test.users]
    [metabase.test.fixtures :as fixtures]
@@ -2262,3 +2263,15 @@
     (testing "Cards can't be moved to the trash"
       (mt/user-http-request :crowberto :put 400 (str "card/" (u/the-id card)) {:collection_id (collection/trash-collection-id)})
       (is (not (t2/exists? :model/Card :collection_id (collection/trash-collection-id)))))))
+
+;; Stale API
+
+(deftest can-fetch-stale-candidates
+  (with-collection-hierarchy [a b c d e]
+    (stale.test/with-stale-card-in-collection card (:id a)
+      (stale.test/with-stale-dashboard-in-collection dashboard (:id a)
+        (is (= (dissoc
+                (mt/user-http-request :crowberto :get 200 (str "collection/" (u/the-id a) "/items")
+                                      :models "dashboard" :models "card")
+                :models)
+               (mt/user-http-request :crowberto :get 200 (str "collection/" (u/the-id a) "/stale"))))))))
