@@ -32,7 +32,6 @@
     :as premium-features
     :refer [defenterprise]]
    [metabase.server.middleware.offset-paging :as mw.offset-paging]
-   [metabase.stale :as stale]
    [metabase.upload :as upload]
    [metabase.util :as u]
    [metabase.util.honey-sql-2 :as h2x]
@@ -1020,6 +1019,14 @@
                               :id [:in (set (map :id dashboards))])
                    :can_write :can_delete :can_restore)))
 
+(defenterprise find-stale-candidates
+  "Returns a boolean if the current user uses sandboxing for any database. In OSS this is always false. Will throw an
+  error if [[api/*current-user-id*]] is not bound."
+  metabase-enterprise.stale
+  [& _args]
+  {:rows []
+   :total 0})
+
 (api/defendpoint GET "/:id/stale"
   "A flexible endpoint that returns stale entities, in the same shape as collections/items, with the following options:
   - `before_date` - only return entities that were last edited before this date (default: 6 months ago)
@@ -1052,7 +1059,7 @@
                             (mapv (fn root->nil [x] (if (= :root x) nil x)))
                             set)
         {:keys [total rows]}
-        (stale/find-candidates {:collection-ids collection-ids
+        (find-stale-candidates {:collection-ids collection-ids
                                 :cutoff-date before-date
                                 :limit mw.offset-paging/*limit*
                                 :offset mw.offset-paging/*offset*
