@@ -22,13 +22,13 @@
 (defonce ^:private queue (queue/bounded-transfer-queue realtime-queue-capacity {:dedupe? true}))
 
 (def ^:dynamic *analyze-execution-in-dev?*
-  "Managing a background thread in the REPL is likely to confound and infuriate, especially when we're using it to run
-  tests. For this reason we run analysis on the main thread by default."
+  "Managing a background thread in the REPL is likely to confuse and infuriate, especially when running tests.
+  For this reason, we run analysis on the main thread by default."
   ::immediate)
 
 (def ^:dynamic *analyze-execution-in-test?*
-  "A card's query is normally analyzed on every create/update. For most tests, this is an unnecessary expense, hence
-  we disable analysis by default."
+  "A card's query is normally analyzed on every create/update.
+  For most tests, this is an unnecessary expense - hence we disable analysis by default."
   ::disabled)
 
 (defmacro with-execution*
@@ -64,16 +64,16 @@
   "Is analysis of the given query type enabled?"
   [query-type]
   (case query-type
-    :native     (public-settings/sql-parsing-enabled)
-    :query      true
-    :mbql/query true
+    :native     (public-settings/query-analysis-native-disabled)
+    :query      (public-settings/query-analysis-mbql-disabled)
+    :mbql/query (public-settings/query-analysis-mbql-disabled)
     false))
 
 (defn- query-field-ids
   "Find out ids of all fields used in a query. Conforms to the same protocol as [[query-analyzer/field-ids-for-sql]],
   so returns `{:explicit #{...int ids}}` map.
 
-  Does not track wildcards for queries rendered as tables afterwards."
+  Does not track wildcards for queries rendered as tables afterward."
   [query]
   (let [query-type (lib/normalized-query-type query)]
     (when (enabled-type? query-type)
@@ -153,7 +153,7 @@
                     {:card card :replacements replacements}))))
 
 (defn analyze-card!
-  "Update the analysis for the given card, if it is active."
+  "Update the analysis for the given card if it is active."
   [card-id]
   (let [card (t2/select-one [:model/Card :id :archived :dataset_query] card-id)]
       (cond
