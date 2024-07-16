@@ -38,6 +38,7 @@ import { NavbarLoadingView } from "../NavbarLoadingView";
 import type { MainNavbarProps, SelectedItem } from "../types";
 
 import MainNavbarView from "./MainNavbarView";
+import { useBookmarks } from "./hooks/useBookmarks";
 
 type NavbarModal = "MODAL_NEW_COLLECTION" | null;
 
@@ -93,85 +94,15 @@ function MainNavbarContainer({
 }: Props) {
   const [modal, setModal] = useState<NavbarModal>(null);
 
-  const dispatch = useDispatch();
+  const { bookmarks, bookmarksResult, reorderBookmarks } = useBookmarks();
 
-  // FIXME: Move bookmark code into hook
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const bookmarksResult = useListBookmarksQuery();
-  const [reorderBookmarksInAPI] = useReorderBookmarksMutation();
-  const reorderBookmarksInAPIWithDebouncing = _.debounce(
-    reorderBookmarksInAPI,
-    500,
-  );
-
-  const getAlphabetizedBookmarks = useCallback((bookmarks: Bookmark[]) => {
-    const data =
-      bookmarks?.map(bookmark => JSON.stringify([bookmark.name, bookmark])) ||
-      [];
-    data.sort();
-    return data.join(",");
-  }, []);
-
-  // FIXME: I think we need to invalidate the RTK query for bookmarks whenever a collection moves into the trash
-  //
-  // FIXME: Need to handle loading state of bookmarks
-
-  // Update the bookmarks in the UI based on the API only if
-  // something other than the ordering of the bookmarks changes.
-  // When reordering bookmarks, we update the order optimistically
-  // to avoid race conditions when the user reorders multiple times
-  useEffect(
-    () => {
-      const bookmarksFromAPI = bookmarksResult.data || [];
-      if (
-        getAlphabetizedBookmarks(bookmarksFromAPI) !==
-        getAlphabetizedBookmarks(bookmarks)
-      ) {
-        setBookmarks(bookmarksFromAPI);
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bookmarksResult.data, bookmarks],
-  );
-
-  /** Update the bookmark order optimistically in the UI, then send the new order to the API */
-  const updateBookmarkOrder = useCallback(
-    async (newBookmarks: Bookmark[]) => {
-      setBookmarks(newBookmarks);
-      const orderings = newBookmarks.map(({ type, item_id }) => ({
-        type,
-        item_id,
-      }));
-      await reorderBookmarksInAPIWithDebouncing({ orderings })
-        ?.unwrap()
-        .catch(async () => {
-          await dispatch(
-            addUndo({
-              icon: "warning",
-              toastColor: "error",
-              message: t`An error occurred.`,
-            }),
-          );
-        });
-    },
-    [reorderBookmarksInAPIWithDebouncing, dispatch],
-  );
-
-  const reorderBookmarks = useCallback(
-    ({ newIndex, oldIndex }: { newIndex: number; oldIndex: number }) => {
-      const newBookmarks = [...bookmarks];
-      const movedBookmark = newBookmarks[oldIndex];
-      newBookmarks.splice(oldIndex, 1);
-      newBookmarks.splice(newIndex, 0, movedBookmark);
-      updateBookmarkOrder(newBookmarks);
-    },
-    [bookmarks, updateBookmarkOrder],
-  );
+  const { isLoading: isLoadingBookmarks, error: errorWhileLoadingBookmarks } =
+    bookmarksResult;
 
   const {
     data: trashCollection,
-    isLoading,
-    error,
+    isLoading: isLoadingTrashCollection,
+    error: errorWhileLoadingTrashCollection,
   } = useGetCollectionQuery({ id: "trash" });
 
   const collectionTree = useMemo<CollectionTreeItem[]>(() => {
@@ -231,12 +162,12 @@ function MainNavbarContainer({
     return null;
   }, [modal, closeModal, onChangeLocation]);
 
-  const allError = props.allError || !!error;
+  const allError = props.allError || !!errorWhileLoadingTrashCollection || !!errorWhileLoadingBookmarks;
   if (allError) {
     return <NavbarErrorView />;
   }
 
-  const allFetched = props.allFetched && !isLoading;
+  const allFetched = props.allFetched && !isLoadingTrashCollection && !isLoadingBookmarks;
   if (!allFetched) {
     return <NavbarLoadingView />;
   }

@@ -174,7 +174,7 @@ const BookmarkList = ({
               <BookmarkItem
                 bookmark={bookmark}
                 isSorting={isSorting}
-                key={index}
+                key={bookmark.id}
                 index={index}
                 selectedItem={selectedItem}
                 onSelect={onSelect}
