@@ -1,9 +1,14 @@
 import type { LocationDescriptor } from "history";
-import { useCallback, useMemo, useState, memo } from "react";
+import { useCallback, useMemo, useState, memo, useEffect } from "react";
 import { connect } from "react-redux";
+import { t } from "ttag";
 import _ from "underscore";
 
-import { useGetCollectionQuery } from "metabase/api";
+import {
+  useGetCollectionQuery,
+  useListBookmarksQuery,
+  useReorderBookmarksMutation,
+} from "metabase/api";
 import { logout } from "metabase/auth/actions";
 import CreateCollectionModal from "metabase/collections/containers/CreateCollectionModal";
 import {
@@ -11,7 +16,7 @@ import {
   nonPersonalOrArchivedCollection,
 } from "metabase/collections/utils";
 import Modal from "metabase/components/Modal";
-import Bookmarks, { getOrderedBookmarks } from "metabase/entities/bookmarks";
+import { getOrderedBookmarks } from "metabase/entities/bookmarks";
 import type { CollectionTreeItem } from "metabase/entities/collections";
 import Collections, {
   buildCollectionTree,
@@ -19,7 +24,9 @@ import Collections, {
   ROOT_COLLECTION,
 } from "metabase/entities/collections";
 import Databases from "metabase/entities/databases";
+import { useDispatch } from "metabase/lib/redux";
 import * as Urls from "metabase/lib/urls";
+import { addUndo } from "metabase/redux/undo";
 import { getHasDataAccess, getHasOwnDatabase } from "metabase/selectors/data";
 import { getUser, getUserIsAdmin } from "metabase/selectors/user";
 import type Database from "metabase-lib/v1/metadata/Database";
@@ -46,7 +53,6 @@ function mapStateToProps(state: State, { databases = [] }: DatabaseProps) {
 
 const mapDispatchToProps = {
   logout,
-  onReorderBookmarks: Bookmarks.actions.reorder,
 };
 
 interface Props extends MainNavbarProps {
@@ -61,7 +67,6 @@ interface Props extends MainNavbarProps {
   allError: boolean;
   allFetched: boolean;
   logout: () => void;
-  onReorderBookmarks: (bookmarks: Bookmark[]) => void;
   onChangeLocation: (location: LocationDescriptor) => void;
 }
 
@@ -70,7 +75,6 @@ interface DatabaseProps {
 }
 
 function MainNavbarContainer({
-  bookmarks,
   isAdmin,
   selectedItems,
   isOpen,
@@ -85,10 +89,79 @@ function MainNavbarContainer({
   closeNavbar,
   logout,
   onChangeLocation,
-  onReorderBookmarks,
   ...props
 }: Props) {
   const [modal, setModal] = useState<NavbarModal>(null);
+
+  const dispatch = useDispatch();
+
+  // FIXME: Move bookmark code into hook
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const bookmarksResult = useListBookmarksQuery();
+  const [reorderBookmarksInAPI] = useReorderBookmarksMutation();
+  const reorderBookmarksInAPIWithDebouncing = _.debounce(
+    reorderBookmarksInAPI,
+    500,
+  );
+
+  const getAlphabetizedBookmarks = useCallback((bookmarks: Bookmark[]) => {
+    const data =
+      bookmarks?.map(bookmark => JSON.stringify([bookmark.name, bookmark])) ||
+      [];
+    data.sort();
+    return data.join(",");
+  }, []);
+
+  // FIXME: I think we need to invalidate the RTK query for bookmarks whenever a collection moves into the trash
+
+  // Update the bookmarks in the UI only if something other than the sort changes
+  useEffect(
+    () => {
+      const bookmarksFromAPI = bookmarksResult.data || [];
+      if (
+        getAlphabetizedBookmarks(bookmarksFromAPI) !==
+        getAlphabetizedBookmarks(bookmarks)
+      ) {
+        setBookmarks(bookmarksFromAPI);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bookmarksResult.data, bookmarks],
+  );
+
+  /** Update the bookmark order optimistically in the UI, then send the new order to the API */
+  const updateBookmarkOrder = useCallback(
+    async (newBookmarks: Bookmark[]) => {
+      setBookmarks(newBookmarks);
+      const orderings = newBookmarks.map(({ type, item_id }) => ({
+        type,
+        item_id,
+      }));
+      await reorderBookmarksInAPIWithDebouncing({ orderings })
+        ?.unwrap()
+        .catch(async () => {
+          await dispatch(
+            addUndo({
+              icon: "warning",
+              toastColor: "error",
+              message: t`An error occurred.`,
+            }),
+          );
+        });
+    },
+    [reorderBookmarksInAPIWithDebouncing, dispatch],
+  );
+
+  const reorderBookmarks = useCallback(
+    ({ newIndex, oldIndex }: { newIndex: number; oldIndex: number }) => {
+      const newBookmarks = [...bookmarks];
+      const movedBookmark = newBookmarks[oldIndex];
+      newBookmarks.splice(oldIndex, 1);
+      newBookmarks.splice(newIndex, 0, movedBookmark);
+      updateBookmarkOrder(newBookmarks);
+    },
+    [bookmarks, updateBookmarkOrder],
+  );
 
   const {
     data: trashCollection,
@@ -131,19 +204,6 @@ function MainNavbarContainer({
       return tree;
     }
   }, [rootCollection, trashCollection, collections, currentUser]);
-
-  const reorderBookmarks = useCallback(
-    ({ newIndex, oldIndex }: { newIndex: number; oldIndex: number }) => {
-      const newBookmarks = [...bookmarks];
-      const movedBookmark = newBookmarks[oldIndex];
-
-      newBookmarks.splice(oldIndex, 1);
-      newBookmarks.splice(newIndex, 0, movedBookmark);
-
-      onReorderBookmarks(newBookmarks);
-    },
-    [bookmarks, onReorderBookmarks],
-  );
 
   const onCreateNewCollection = useCallback(() => {
     setModal("MODAL_NEW_COLLECTION");
@@ -201,9 +261,6 @@ function MainNavbarContainer({
 
 // eslint-disable-next-line import/no-default-export -- deprecated usage
 export default _.compose(
-  Bookmarks.loadList({
-    loadingAndErrorWrapper: false,
-  }),
   Collections.load({
     id: ROOT_COLLECTION.id,
     entityAlias: "rootCollection",
