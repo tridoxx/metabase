@@ -1,6 +1,7 @@
 // @ts-expect-error There is no type definition
 import createAsyncCallback from "@loki/create-async-callback";
 import type { ComponentStory, Story } from "@storybook/react";
+import { userEvent, within } from "@storybook/testing-library";
 import { useEffect, type ComponentProps } from "react";
 import { Provider } from "react-redux";
 
@@ -123,6 +124,23 @@ export const DarkThemeDefault = Template.bind({});
 DarkThemeDefault.args = {
   ...defaultArgs,
   theme: "night",
+};
+
+// Dark theme download
+export const DarkThemeDownload = Template.bind({});
+DarkThemeDownload.args = {
+  ...defaultArgs,
+  theme: "night",
+};
+
+DarkThemeDownload.play = async ({ canvasElement }) => {
+  const downloadButton = canvasElement.querySelector(".Icon-download");
+  await userEvent.click(downloadButton!);
+
+  // this is outside of the canvas because of the portal used for the popovers
+  const pngButton = within(window.document.body).getByText(".png");
+
+  await userEvent.click(pngButton);
 };
 
 // Transparent theme
