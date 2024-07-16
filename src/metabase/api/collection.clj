@@ -1040,7 +1040,7 @@
    is_recursive   [:boolean {:default false}]
    sort_column    [:maybe {:default :name} (into [:enum] (map keyword valid-sort-columns))]
    sort_direction [:maybe {:default :asc} (into [:enum] (map keyword valid-sort-directions))]}
-  (premium-features/assert-has-feature :stale (tru "Stale"))
+  ;;(premium-features/assert-has-feature :stale (tru "Stale"))
   (let [before-date    (if before_date
                          (try (t/local-date "yyyy-MM-dd" before_date)
                               (catch Exception _
