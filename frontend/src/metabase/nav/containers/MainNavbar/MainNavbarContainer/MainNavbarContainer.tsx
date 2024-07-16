@@ -114,7 +114,10 @@ function MainNavbarContainer({
 
   // FIXME: I think we need to invalidate the RTK query for bookmarks whenever a collection moves into the trash
 
-  // Update the bookmarks in the UI only if something other than the sort changes
+  // Update the bookmarks in the UI based on the API only if
+  // something other than the ordering of the bookmarks changes.
+  // When reordering bookmarks, we update the order optimistically
+  // to avoid race conditions when the user reorders multiple times
   useEffect(
     () => {
       const bookmarksFromAPI = bookmarksResult.data || [];
