@@ -113,6 +113,8 @@ function MainNavbarContainer({
   }, []);
 
   // FIXME: I think we need to invalidate the RTK query for bookmarks whenever a collection moves into the trash
+  //
+  // FIXME: Need to handle loading state of bookmarks
 
   // Update the bookmarks in the UI based on the API only if
   // something other than the ordering of the bookmarks changes.
