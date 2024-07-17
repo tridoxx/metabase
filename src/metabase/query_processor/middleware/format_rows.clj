@@ -3,6 +3,7 @@
    Currently, the only thing this does is convert datetime types to ISO-8601 strings in the appropriate timezone."
   (:require
    [java-time.api :as t]
+   [metabase.perf-util :as perf]
    [metabase.query-processor.timezone :as qp.timezone]
    [metabase.util.date-2 :as u.date]
    [metabase.util.log :as log]
@@ -61,7 +62,7 @@
         ;; a column will have `converted_timezone` metadata if it is the result of `convert-timezone` expression
         ;; in that case, we'll format the results with the target timezone.
         ;; Otherwise format it with results-timezone
-        cols-zone-id (map #(t/zone-id (get % :converted_timezone timezone-id)) (:cols metadata))]
+        cols-zone-id (perf/mapv #(t/zone-id (get % :converted_timezone timezone-id)) (:cols metadata))]
     (fn
       ([]
        (rf))
@@ -70,7 +71,7 @@
        (rf result))
 
       ([result row]
-       (rf result (mapv format-value row cols-zone-id))))))
+       (rf result (perf/mapv format-value row cols-zone-id))))))
 
 (defn format-rows
   "Format individual query result values as needed.  Ex: format temporal values as ISO-8601 strings w/ timezone offset."

@@ -3,6 +3,7 @@
    [clojure.data.csv :as csv]
    [java-time.api :as t]
    [metabase.formatter :as formatter]
+   [metabase.perf-util :as perf]
    [metabase.query-processor.pivot.postprocess :as qp.pivot.postprocess]
    [metabase.query-processor.streaming.common :as common]
    [metabase.query-processor.streaming.interface :as qp.si]
@@ -66,9 +67,9 @@
                             (let [row-v (into [] row)]
                               (for [i output-order] (row-v i)))
                             row)
-              xf-row      (mapv (fn [formatter r]
-                                  (formatter (common/format-value r)))
-                                @ordered-formatters ordered-row)]
+              xf-row      (perf/mapv (fn [formatter r]
+                                       (formatter (common/format-value r)))
+                                     @ordered-formatters ordered-row)]
           (if @pivot-options
             ;; if we're processing a pivot result, we don't write it out yet, just store it
             ;; so that we can post process the full set of results in finish!
