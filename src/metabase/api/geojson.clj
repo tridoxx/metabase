@@ -2,6 +2,7 @@
   (:require
    [clj-http.client :as http]
    [clojure.java.io :as io]
+   [clojure.string :as str]
    [compojure.core :refer [GET]]
    [malli.core :as mc]
    [metabase.api.common :as api]
@@ -125,15 +126,26 @@
 
 (def ^:private connection-timeout-ms 8000)
 
+(defn- url->geojson
+  [url]
+  (let [resp (http/get url {:as                 :reader
+                            :redirect-strategy  :none
+                            :socket-timeout     connection-timeout-ms
+                            :connection-timeout connection-timeout-ms})
+        success? (= 200 (:status resp))
+        json? (str/starts-with? (get-in resp [:headers :content-type]) "application/json" )
+        text? (str/starts-with? (get-in resp [:headers :content-type]) "text/plain")
+        ok-content-type? (or json? text?)]
+    (if (and success? ok-content-type?)
+      (:body resp)
+      (throw (ex-info (tru "GeoJSON URL failed to load") {:status-code 400})))))
+
 (defn- read-url-and-respond
   "Reads the provided URL and responds with the contents as a stream."
   [url respond]
   (with-open [^BufferedReader reader (if-let [resource (io/resource url)]
                                        (io/reader resource)
-                                       (:body (http/get url {:as                 :reader
-                                                             :redirect-strategy  :none
-                                                             :socket-timeout     connection-timeout-ms
-                                                             :connection-timeout connection-timeout-ms})))
+                                       (url->geojson url))
               is                     (ReaderInputStream. reader)]
     (respond (-> (response/response is)
                  (response/content-type "application/json")))))
