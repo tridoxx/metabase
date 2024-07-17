@@ -45,6 +45,7 @@ import {
   getLabelString,
   cronToScheduleSettings,
   scheduleSettingsToCron,
+  getStrategyValidationSchema,
 } from "../utils";
 
 import {
@@ -415,13 +416,18 @@ const StrategySelector = ({
       >
         <Stack mt="md" spacing="md">
           {_.map(availableStrategies, (option, name) => {
-            const optionLabelParts = getLabelString(option.label, model).split(
-              ":",
-            );
+            const labelString = getLabelString(option.label, model);
+            // Accommodate colon sometimes used in Asian languages
+            const colon = /：/.test(labelString) ? "：" : ":";
+            const optionLabelParts = labelString.split(colon);
             const optionLabelFormatted = (
               <>
                 <strong>{optionLabelParts[0]}</strong>
-                {optionLabelParts[1] ? <>: {optionLabelParts[1]}</> : null}
+                {optionLabelParts[1] ? (
+                  <>
+                    {colon} {optionLabelParts[1]}
+                  </>
+                ) : null}
               </>
             );
             return (
@@ -491,9 +497,10 @@ const getDefaultValueForField = (
   strategyType: CacheStrategyType,
   fieldName?: string,
 ) => {
-  return fieldName
-    ? PLUGIN_CACHING.strategies[strategyType].validateWith.cast({})[fieldName]
-    : "";
+  const schema = getStrategyValidationSchema(
+    PLUGIN_CACHING.strategies[strategyType],
+  );
+  return fieldName ? schema.cast({})[fieldName] : "";
 };
 
 const MultiplierFieldSubtitle = () => (

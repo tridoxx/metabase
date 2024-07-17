@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { t } from "ttag";
+import _ from "underscore";
 
 import {
   hourTo24HourFormat,
@@ -17,13 +18,10 @@ import type {
 } from "metabase-types/api";
 
 import {
-  amAndPM,
   defaultHour,
-  frames,
   getHours,
+  getScheduleStrings,
   minutes,
-  weekdayOfMonthOptions,
-  weekdays,
 } from "./constants";
 import type { UpdateSchedule } from "./types";
 import { getLongestSelectLabel } from "./utils";
@@ -35,6 +33,7 @@ export const SelectFrame = ({
   schedule: ScheduleSettings;
   updateSchedule: UpdateSchedule;
 }) => {
+  const { frames } = getScheduleStrings();
   return (
     <AutoWidthSelect
       value={schedule.schedule_frame}
@@ -55,6 +54,7 @@ export const SelectTime = ({
   updateSchedule: UpdateSchedule;
   timezone?: string | null;
 }) => {
+  const { amAndPM } = getScheduleStrings();
   const applicationName = useSelector(getApplicationName);
   const isClock12Hour = !has24HourModeSetting();
   const hourIn24HourFormat =
@@ -114,6 +114,7 @@ export const SelectWeekday = ({
   schedule: ScheduleSettings;
   updateSchedule: UpdateSchedule;
 }) => {
+  const { weekdays } = getScheduleStrings();
   return (
     <AutoWidthSelect
       value={schedule.schedule_day}
@@ -133,15 +134,18 @@ export const SelectWeekdayOfMonth = ({
 }: {
   schedule: ScheduleSettings;
   updateSchedule: UpdateSchedule;
-}) => (
-  <AutoWidthSelect
-    value={schedule.schedule_day || "calendar-day"}
-    onChange={(value: ScheduleDayType | "calendar-day") =>
-      updateSchedule("schedule_day", value === "calendar-day" ? null : value)
-    }
-    data={weekdayOfMonthOptions}
-  />
-);
+}) => {
+  const { weekdayOfMonthOptions } = getScheduleStrings();
+  return (
+    <AutoWidthSelect
+      value={schedule.schedule_day || "calendar-day"}
+      onChange={(value: ScheduleDayType | "calendar-day") =>
+        updateSchedule("schedule_day", value === "calendar-day" ? null : value)
+      }
+      data={weekdayOfMonthOptions}
+    />
+  );
+};
 
 export const SelectMinute = ({
   schedule,
@@ -164,13 +168,27 @@ export const SelectMinute = ({
   );
 };
 
+const estimateWidthOfString = (str: string) => {
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return 0;
+  }
+  context.font = "14px sans-serif";
+  const width = context.measureText(str).width;
+  return width;
+};
+const estimateWidthOfString_memoized = _.memoize(estimateWidthOfString);
+
 export const AutoWidthSelect = (props: SelectProps) => {
   const longestLabel = useMemo(
     () => getLongestSelectLabel(props.data),
     [props.data],
   );
   const maxWidth =
-    longestLabel.length > 15 ? "unset" : `${longestLabel.length + 0.85}rem`;
+    longestLabel.length > 15
+      ? "unset"
+      : `${estimateWidthOfString_memoized(longestLabel) + 50}px`;
   return (
     <Select
       miw="5rem"

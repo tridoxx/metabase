@@ -14,20 +14,11 @@ import {
   SelectWeekday,
   SelectWeekdayOfMonth,
 } from "./components";
-import {
-  defaultDay,
-  defaultHour,
-  frames,
-  optionNameTranslations,
-  weekdayOfMonthOptions,
-} from "./constants";
+import { defaultDay, defaultHour, getScheduleStrings } from "./constants";
 import type { ScheduleChangeProp, UpdateSchedule } from "./types";
 import { addScheduleComponents, getLongestSelectLabel } from "./utils";
 
 type ScheduleProperty = keyof ScheduleSettings;
-
-const getOptionName = (option: ScheduleType) =>
-  optionNameTranslations[option] || capitalize(option);
 
 export interface ScheduleProps {
   schedule: ScheduleSettings;
@@ -148,6 +139,8 @@ const renderSchedule = ({
 }: Omit<ScheduleProps, "onScheduleChange"> & {
   updateSchedule: UpdateSchedule;
 }) => {
+  const { frames, weekdayOfMonthOptions } = getScheduleStrings();
+
   const itemProps = {
     schedule,
     updateSchedule,
@@ -179,7 +172,7 @@ const renderSchedule = ({
       return addScheduleComponents(
         c(
           "{0} is a verb like 'Send', {1} is an adverb like 'hourly', {2} is a number of minutes",
-        ).t`{0} {1} at {2} minutes past the hour`,
+        ).t`${"{0}"} ${"{1}"} at ${"{2}"} minutes past the hour`,
         [
           verb,
           <SelectFrequency key="frequency" {...frequencyProps} />,
@@ -192,7 +185,7 @@ const renderSchedule = ({
         // We cannot use "{0} {1}" as an argument to the t function, since only has placeholders.
         // So, as a workaround, we include square brackets in the string, and then remove them.
         c("{0} is a verb like 'Send', {1} is an adverb like 'hourly'.")
-          .t`[{0} {1}]`
+          .t`[${"{0}"} ${"{1}"}]`
           .replace(/^\[/, "")
           .replace(/\]$/, ""),
         [verb, <SelectFrequency key="frequency" {...frequencyProps} />],
@@ -203,7 +196,7 @@ const renderSchedule = ({
     return addScheduleComponents(
       c(
         "{0} is a verb like 'Send', {1} is an adverb like 'hourly', {2} is a time like '12:00pm'",
-      ).t`{0} {1} at {2}`,
+      ).t`${"{0}"} ${"{1}"} at ${"{2}"}`,
       [
         verb,
         <SelectFrequency key="frequency" {...frequencyProps} />,
@@ -215,7 +208,7 @@ const renderSchedule = ({
     return addScheduleComponents(
       c(
         "{0} is a verb like 'Send', {1} is an adverb like 'hourly', {2} is a day like 'Tuesday', {3} is a time like '12:00pm'",
-      ).t`{0} {1} on {2} at {3}`,
+      ).t`${"{0}"} ${"{1}"} on ${"{2}"} at ${"{3}"}`,
       [
         verb,
         <SelectFrequency key="frequency" {...frequencyProps} />,
@@ -229,7 +222,7 @@ const renderSchedule = ({
       return addScheduleComponents(
         c(
           "{0} is a verb like 'Send', {1} is an adverb like 'hourly', {2} is the noun '15th' (as in 'the 15th of the month'), {3} is a time like '12:00pm'",
-        ).t`{0} {1} on the {2} at {3}`,
+        ).t`${"{0}"} ${"{1}"} on the ${"{2}"} at ${"{3}"}`,
         [
           verb,
           <SelectFrequency key="frequency" {...frequencyProps} />,
@@ -242,7 +235,7 @@ const renderSchedule = ({
       return addScheduleComponents(
         c(
           "{0} is a verb like 'Send', {1} is an adverb like 'hourly', {2} is an adjective like 'first', {3} is a day like 'Tuesday', {4} is a time like '12:00pm'",
-        ).t`{0} {1} on the {2} {3} at {4}`,
+        ).t`${"{0}"} ${"{1}"} on the ${"{2}"} ${"{3}"} at ${"{4}"}`,
         [
           verb,
           <SelectFrequency key="frequency" {...frequencyProps} />,
@@ -271,8 +264,10 @@ const SelectFrequency = ({
   updateSchedule: UpdateSchedule;
   scheduleOptions: ScheduleType[];
 }) => {
+  const { scheduleOptionNames } = getScheduleStrings();
+
   const scheduleTypeOptions = scheduleOptions.map(option => ({
-    label: getOptionName(option),
+    label: scheduleOptionNames[option] || capitalize(option),
     value: option,
   }));
 
