@@ -63,11 +63,12 @@
 (defn enabled-type?
   "Is analysis of the given query type enabled?"
   [query-type]
-  (case query-type
-    :native     (public-settings/query-analysis-native-disabled)
-    :query      (public-settings/query-analysis-mbql-disabled)
-    :mbql/query (public-settings/query-analysis-mbql-disabled)
-    false))
+  (and (public-settings/query-analysis-enabled)
+       (case query-type
+         :native (not (public-settings/query-analysis-native-disabled))
+         :query (not (public-settings/query-analysis-mbql-disabled))
+         :mbql/query (not (public-settings/query-analysis-mbql-disabled))
+         false)))
 
 (defn- query-field-ids
   "Find out ids of all fields used in a query. Conforms to the same protocol as [[query-analyzer/field-ids-for-sql]],
