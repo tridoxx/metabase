@@ -1,3 +1,8 @@
+import {
+  createSlice,
+  createAsyncThunk,
+  type PayloadAction,
+} from "@reduxjs/toolkit";
 import { t } from "ttag";
 import _ from "underscore";
 
@@ -13,6 +18,7 @@ import type {
   Dataset,
   VisualizationSettings,
 } from "metabase-types/api";
+import type { Download, DownloadsState, State } from "metabase-types/store";
 
 export interface DownloadQueryResultsOpts {
   type: string;
@@ -34,14 +40,16 @@ interface DownloadQueryResultsParams {
   params?: URLSearchParams;
 }
 
-export const downloadQueryResults =
-  (opts: DownloadQueryResultsOpts) => async () => {
+export const downloadQueryResults = createAsyncThunk(
+  "metabase/downloads/downloadQueryResults",
+  async (opts: DownloadQueryResultsOpts, { dispatch }) => {
     if (opts.type === Urls.exportFormatPng) {
-      await downloadChart(opts);
+      downloadChart(opts);
     } else {
-      await downloadDataset(opts);
+      dispatch(downloadDataset({ opts, id: Date.now() }));
     }
-  };
+  },
+);
 
 const downloadChart = async ({
   question,
@@ -55,13 +63,23 @@ const downloadChart = async ({
   await saveChartImage(chartSelector, fileName);
 };
 
-const downloadDataset = async (opts: DownloadQueryResultsOpts) => {
-  const params = getDatasetParams(opts);
-  const response = await getDatasetResponse(params);
-  const fileName = getDatasetFileName(response.headers, opts.type);
-  const fileContent = await response.blob();
-  openSaveDialog(fileName, fileContent);
-};
+export const downloadDataset = createAsyncThunk(
+  "metabase/downloads/downloadDataset",
+  async (
+    { opts, id }: { opts: DownloadQueryResultsOpts; id: number },
+    { dispatch },
+  ) => {
+    const params = getDatasetParams(opts);
+    const response = await getDatasetResponse(params);
+    const name = getDatasetFileName(response.headers, opts.type);
+    const downloadInfo = { id, name };
+    dispatch(downloads.actions.updateFileName(downloadInfo));
+    const fileContent = await response.blob();
+    openSaveDialog(name, fileContent);
+
+    return downloadInfo;
+  },
+);
 
 const getDatasetParams = ({
   type,
@@ -76,28 +94,16 @@ const getDatasetParams = ({
   visualizationSettings,
 }: DownloadQueryResultsOpts): DownloadQueryResultsParams => {
   const cardId = question.id();
-  const isQuestionInStaticEmbedDashboard = dashcardId != null && token != null;
+  const isSecureDashboardEmbedding = dashcardId != null && token != null;
 
   // Formatting is always enabled for Excel
   const format_rows = enableFormatting && type !== "xlsx" ? "true" : "false";
 
-  if (isQuestionInStaticEmbedDashboard) {
+  if (isSecureDashboardEmbedding) {
     return {
       method: "GET",
       url: `/api/embed/dashboard/${token}/dashcard/${dashcardId}/card/${cardId}/${type}`,
       params: Urls.getEncodedUrlSearchParams({ ...params, format_rows }),
-    };
-  }
-
-  const isQuestionInPublicDashboard = dashboardId != null && uuid != null;
-  if (isQuestionInPublicDashboard) {
-    return {
-      method: "POST",
-      url: `/api/public/dashboard/${dashboardId}/dashcard/${dashcardId}/card/${cardId}/${type}`,
-      params: new URLSearchParams({ format_rows }),
-      body: {
-        parameters: result?.json_query?.parameters ?? [],
-      },
     };
   }
 
@@ -235,3 +241,59 @@ const openSaveDialog = (fileName: string, fileContent: Blob) => {
   URL.revokeObjectURL(url);
   link.remove();
 };
+
+export const getDownloads = (state: State) => state.downloads;
+
+const initialState: DownloadsState = [];
+
+const downloads = createSlice({
+  name: "metabase/downloads",
+  initialState,
+  reducers: {
+    updateFileName: (
+      state,
+      { payload }: PayloadAction<Pick<Download, "name" | "id">>,
+    ) => {
+      const download = state.find(download => download.id === payload.id);
+      if (download) {
+        download.name = payload.name;
+      }
+    },
+    clearAll: () => initialState,
+    clear: (state, { payload }: PayloadAction<number>) => {
+      return state.filter(item => item.id !== payload);
+    },
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(downloadDataset.pending, (state, action) => {
+        const name = t`Results for ${
+          action.meta.arg.opts.question.card().name
+        }`;
+        state.push({
+          id: action.meta.arg.id,
+          name,
+          status: "in-progress",
+        });
+      })
+      .addCase(downloadDataset.fulfilled, (state, action) => {
+        const download = state.find(item => item.id === action.meta.arg.id);
+        if (download) {
+          download.status = "complete";
+        }
+      })
+      .addCase(downloadDataset.rejected, (state, action) => {
+        const download = state.find(item => item.id === action.meta.arg.id);
+        if (download) {
+          download.status = "error";
+          download.error =
+            action.error.message ?? t`Could not download the file`;
+        }
+      });
+  },
+});
+
+export const {
+  actions: { clearAll },
+} = downloads;
+export const { reducer } = downloads;

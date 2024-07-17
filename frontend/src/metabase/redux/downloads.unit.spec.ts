@@ -1,6 +1,6 @@
 import api from "metabase/lib/api";
 
-import * as downloading from "./downloading";
+import * as downloading from "./downloads";
 
 describe("getDatasetResponse", () => {
   describe("normal deployment", () => {
